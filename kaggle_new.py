@@ -99,7 +99,7 @@ class KaggleConfig(Config):
     # Don't exclude based on confidence. Since we have two classes
     # then 0.5 is the minimum anyway as it picks between nucleus and BG
     # DETECTION_MIN_CONFIDENCE = 0
-    DETECTION_MIN_CONFIDENCE = 0.2  # Randomly try
+    DETECTION_MIN_CONFIDENCE = 0  # Randomly try
 
 
     # Backbone network architecture
@@ -184,6 +184,7 @@ class KaggleDataset(utils.Dataset):
         self.add_class("kaggle", 39, "bus")
         self.add_class("kaggle", 40, "tricycle")
         self.add_class("kaggle", 0, "others")
+
         # Which subset?
         # "val": use hard-coded list above
         # "train": use data from stage1_train minus the hard-coded list above
@@ -193,8 +194,8 @@ class KaggleDataset(utils.Dataset):
         # subset_dir = "stage1_train" if subset in ["train", "val"] else subset
         # dataset_dir = os.path.join(dataset_dir, subset_dir)
 
-        assert subset in ["train", "val"]
-        subset_dir = "train_color/" if subset == "train" else "train_label/"
+        assert subset in ["train", "val", "test"]
+        subset_dir = "train_color/" if subset in ["train","val"] else "test/"
         dataset_dir = os.path.join(dataset_dir, subset_dir)
 
 
@@ -224,29 +225,86 @@ class KaggleDataset(utils.Dataset):
             self.add_image(
                 "kaggle",
                 image_id=image_id,
-                path=os.path.join(dataset_dir, image_id, "images/{}.png".format(image_id)))    ## Change the directory
+                path=os.path.join(dataset_dir, image_id, "{}.jpg".format(image_id)))    ## Change the directory
 
-    def load_mask(self, image_id):
-        """Generate instance masks for an image.
-       Returns:
+    # def load_mask(self, image_id):
+    #     """Generate instance masks for an image.
+    #    Returns:
+    #     masks: A bool array of shape [height, width, instance count] with
+    #         one mask per instance.
+    #     class_ids: a 1D array of class IDs of the instance masks.
+    #     """
+    #     info = self.image_info[image_id]
+    #     # Get mask directory from image path
+    #     # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+    #     mask_dir = os.path.join(ROOT_DIR, "train_label")
+
+    #     # mask_dir = os.path.join(dataset_dir, image_id, "{}.jpg".format(image_id))
+
+
+    #     # Read mask files from .png image
+    #     mask = []
+    #     for f in next(os.walk(mask_dir))[2]:
+    #         if f.endswith(".png"):
+    #             m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
+    #             mask.append(m)
+    #     mask = np.stack(mask, axis=-1)
+    #     # Return mask, and array of class IDs of each instance. Since we have
+    #     # one class ID, we return an array of ones
+    #     return mask, np.ones([mask.shape[-1]], dtype=np.int32)
+
+
+###################### Coco "load_mask" (mutiple class/instances)######################
+        """Load instance masks for the given image.
+        Different datasets use different ways to store masks. This
+        function converts the different mask format to one format
+        in the form of a bitmap [height, width, instances].
+        Returns:
         masks: A bool array of shape [height, width, instance count] with
             one mask per instance.
         class_ids: a 1D array of class IDs of the instance masks.
         """
-        info = self.image_info[image_id]
-        # Get mask directory from image path
-        mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+        # If not a COCO image, delegate to parent class.
+    def load_mask(self, image_id):
+        image_info = self.image_info[image_id]
+        # if image_info["source"] != "coco":
+        #     return super(CocoDataset, self).load_mask(image_id)
 
-        # Read mask files from .png image
-        mask = []
-        for f in next(os.walk(mask_dir))[2]:
-            if f.endswith(".png"):
-                m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
-                mask.append(m)
-        mask = np.stack(mask, axis=-1)
-        # Return mask, and array of class IDs of each instance. Since we have
-        # one class ID, we return an array of ones
-        return mask, np.ones([mask.shape[-1]], dtype=np.int32)
+        instance_masks = []
+        class_ids = []
+        annotations = self.image_info[image_id]["annotations"]
+        # Build mask of shape [height, width, instance_count] and list
+        # of class IDs that correspond to each channel of the mask.
+        for annotation in annotations:
+            class_id = self.map_source_class_id(
+                "coco.{}".format(annotation['category_id']))
+            if class_id:
+                m = self.annToMask(annotation, image_info["height"],
+                                   image_info["width"])
+                # Some objects are so small that they're less than 1 pixel area
+                # and end up rounded out. Skip those objects.
+                if m.max() < 1:
+                    continue
+                # Is it a crowd? If so, use a negative class ID.
+                if annotation['iscrowd']:
+                    # Use negative class ID for crowds
+                    class_id *= -1
+                    # For crowd masks, annToMask() sometimes returns a mask
+                    # smaller than the given dimensions. If so, resize it.
+                    if m.shape[0] != image_info["height"] or m.shape[1] != image_info["width"]:
+                        m = np.ones([image_info["height"], image_info["width"]], dtype=bool)
+                instance_masks.append(m)
+                class_ids.append(class_id)
+
+        # Pack instance masks into an array
+        if class_ids:
+            mask = np.stack(instance_masks, axis=2).astype(np.bool)
+            class_ids = np.array(class_ids, dtype=np.int32)
+            return mask, class_ids
+        else:
+            # Call super class to return an empty mask
+            return super(CocoDataset, self).load_mask(image_id)
+##################### Coco "load_mask" (mutiple class/instances)######################
 
     def image_reference(self, image_id):
         """Return the path of the image."""
