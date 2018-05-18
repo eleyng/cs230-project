@@ -184,8 +184,13 @@ class KaggleDataset(utils.Dataset):
         # "val": use hard-coded list above
         # "train": use data from stage1_train minus the hard-coded list above
         # else: use the data from the specified sub-directory
-        assert subset in ["train", "val", "stage1_train", "stage1_test", "stage2_test"]
-        subset_dir = "stage1_train" if subset in ["train", "val"] else subset
+
+        # assert subset in ["train", "val", "stage1_train", "stage1_test", "stage2_test"]
+        # subset_dir = "stage1_train" if subset in ["train", "val"] else subset
+        # dataset_dir = os.path.join(dataset_dir, subset_dir)
+
+        assert subset in ["train", "val"]
+        subset_dir = "train_color/" if subset == "train" else "train_label/"
         dataset_dir = os.path.join(dataset_dir, subset_dir)
 
 
@@ -256,17 +261,17 @@ def train(model, dataset_dir, subset):
     """Train the model."""
     # Training dataset.
     dataset_train = KaggleDataset()
-    dataset_train.load_nucleus(dataset_dir, subset)
+    dataset_train.load_kaggle(dataset_dir, "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = KaggleDataset()
-    dataset_val.load_nucleus(dataset_dir, "val")
+    dataset_val.load_kaggle(dataset_dir, "val")
     dataset_val.prepare()
 
     # Image augmentation
     # http://imgaug.readthedocs.io/en/latest/source/augmenters.html
-    
+
     # augmentation = iaa.SomeOf((0, 2), [
     #     iaa.Fliplr(0.5),
     #     iaa.Flipud(0.5),
@@ -367,13 +372,13 @@ def detect(model, dataset_dir, subset):
     # Create directory
     if not os.path.exists(RESULTS_DIR):
         os.makedirs(RESULTS_DIR)
-    submit_dir = "submit_{:%Y%m%dT%H%M%S}".format(datetime.datetime.now())
+    submit_dir = "submit_{:%Y%m%dT%H%M%S}".format(datetime.datetime.now())   ## Modify this!!!
     submit_dir = os.path.join(RESULTS_DIR, submit_dir)
     os.makedirs(submit_dir)
 
     # Read dataset
     dataset = KaggleDataset()
-    dataset.load_nucleus(dataset_dir, subset)
+    dataset.load_kaggle(dataset_dir, subset)
     dataset.prepare()
     # Load over images
     submission = []
@@ -411,7 +416,7 @@ if __name__ == '__main__':
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description='Mask R-CNN for nuclei counting and segmentation')
+        description='Mask R-CNN for kaggle counting and segmentation')
     parser.add_argument("command",
                         metavar="<command>",
                         help="'train' or 'detect'")
