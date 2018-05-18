@@ -18,7 +18,7 @@ import skimage.io
 from imgaug import augmenters as iaa
 
 # Root directory of the project
-ROOT_DIR = os.path.abspath("../../")
+ROOT_DIR = os.path.abspath("../../")   ##### Modify it!
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
@@ -227,31 +227,31 @@ class KaggleDataset(utils.Dataset):
                 image_id=image_id,
                 path=os.path.join(dataset_dir, image_id, "{}.jpg".format(image_id)))    ## Change the directory
 
-    # def load_mask(self, image_id):
-    #     """Generate instance masks for an image.
-    #    Returns:
-    #     masks: A bool array of shape [height, width, instance count] with
-    #         one mask per instance.
-    #     class_ids: a 1D array of class IDs of the instance masks.
-    #     """
-    #     info = self.image_info[image_id]
-    #     # Get mask directory from image path
-    #     # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
-    #     mask_dir = os.path.join(ROOT_DIR, "train_label")
+    def load_mask(self, image_id):
+        """Generate instance masks for an image.
+       Returns:
+        masks: A bool array of shape [height, width, instance count] with
+            one mask per instance.
+        class_ids: a 1D array of class IDs of the instance masks.
+        """
+        info = self.image_info[image_id]
+        # Get mask directory from image path
+        # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+        mask_dir = os.path.join(ROOT_DIR, "train_label")
 
-    #     # mask_dir = os.path.join(dataset_dir, image_id, "{}.jpg".format(image_id))
+        # mask_dir = os.path.join(dataset_dir, image_id, "{}.jpg".format(image_id))
 
 
-    #     # Read mask files from .png image
-    #     mask = []
-    #     for f in next(os.walk(mask_dir))[2]:
-    #         if f.endswith(".png"):
-    #             m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
-    #             mask.append(m)
-    #     mask = np.stack(mask, axis=-1)
-    #     # Return mask, and array of class IDs of each instance. Since we have
-    #     # one class ID, we return an array of ones
-    #     return mask, np.ones([mask.shape[-1]], dtype=np.int32)
+        # Read mask files from .png image
+        mask = []
+        for f in next(os.walk(mask_dir))[2]:
+            if f.endswith(".png"):
+                m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
+                mask.append(m)
+        mask = np.stack(mask, axis=-1)
+        # Return mask, and array of class IDs of each instance. Since we have
+        # one class ID, we return an array of ones
+        return mask, np.ones([mask.shape[-1]], dtype=np.int32)
 
 
 ###################### Coco "load_mask" (mutiple class/instances)######################
@@ -272,38 +272,60 @@ class KaggleDataset(utils.Dataset):
 
         instance_masks = []
         class_ids = []
-        annotations = self.image_info[image_id]["annotations"]
         # Build mask of shape [height, width, instance_count] and list
         # of class IDs that correspond to each channel of the mask.
-        for annotation in annotations:
-            class_id = self.map_source_class_id(
-                "coco.{}".format(annotation['category_id']))
-            if class_id:
-                m = self.annToMask(annotation, image_info["height"],
-                                   image_info["width"])
-                # Some objects are so small that they're less than 1 pixel area
-                # and end up rounded out. Skip those objects.
-                if m.max() < 1:
-                    continue
-                # Is it a crowd? If so, use a negative class ID.
-                if annotation['iscrowd']:
-                    # Use negative class ID for crowds
-                    class_id *= -1
-                    # For crowd masks, annToMask() sometimes returns a mask
-                    # smaller than the given dimensions. If so, resize it.
-                    if m.shape[0] != image_info["height"] or m.shape[1] != image_info["width"]:
-                        m = np.ones([image_info["height"], image_info["width"]], dtype=bool)
-                instance_masks.append(m)
+        info = self.image_info[image_id]
+        # Get mask directory from image path
+        # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+        mask_dir = os.path.join(ROOT_DIR, "train_label")
+        # Read mask files from .png image
+        mask = []
+        for f in next(os.walk(mask_dir))[2]:
+            if f.endswith(".png"):
+                m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
+                mask.append(m)
+                tlabel = np.asarray(Image.open(os.path.join(mask_dir, f)))
+                class_id = tlabel//1000
                 class_ids.append(class_id)
+        mask = np.stack(mask, axis=-1)
+
+        class_ids = np.array(class_ids, dtype=np.int32)
+        return mask, class_ids
+        # Return mask, and array of class IDs of each instance. Since we have
+        # one class ID, we return an array of ones
+        # return mask, np.ones([mask.shape[-1]], dtype=np.int32)
+        ##
+
+        # for annotation in annotations:
+        #     class_id = self.map_source_class_id(
+        #         "coco.{}".format(annotation['category_id']))
+        #     if class_id:
+        #         m = self.annToMask(annotation, image_info["height"],
+        #                            image_info["width"])
+        #         # Some objects are so small that they're less than 1 pixel area
+        #         # and end up rounded out. Skip those objects.
+        #         if m.max() < 1:
+        #             continue
+        #         # Is it a crowd? If so, use a negative class ID.
+        #         if annotation['iscrowd']:
+        #             # Use negative class ID for crowds
+        #             class_id *= -1
+        #             # For crowd masks, annToMask() sometimes returns a mask
+        #             # smaller than the given dimensions. If so, resize it.
+        #             if m.shape[0] != image_info["height"] or m.shape[1] != image_info["width"]:
+        #                 m = np.ones([image_info["height"], image_info["width"]], dtype=bool)
+        #         instance_masks.append(m)
+
+        
 
         # Pack instance masks into an array
-        if class_ids:
-            mask = np.stack(instance_masks, axis=2).astype(np.bool)
-            class_ids = np.array(class_ids, dtype=np.int32)
-            return mask, class_ids
-        else:
+        # if class_ids:
+        #     mask = np.stack(instance_masks, axis=2).astype(np.bool)
+            # class_ids = np.array(class_ids, dtype=np.int32)
+            # return mask, class_ids
+        #else:
             # Call super class to return an empty mask
-            return super(CocoDataset, self).load_mask(image_id)
+            #return super(CocoDataset, self).load_mask(image_id)
 ##################### Coco "load_mask" (mutiple class/instances)######################
 
     def image_reference(self, image_id):
