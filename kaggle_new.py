@@ -85,7 +85,7 @@ class KaggleConfig(Config):
     NAME = "kaggle"
 
     # Adjust depending on your GPU memory
-    IMAGES_PER_GPU = 6
+    #IMAGES_PER_GPU = 6
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 8  # Background + nucleus
@@ -94,41 +94,41 @@ class KaggleConfig(Config):
     # Number of training and validation steps per epoch
     # STEPS_PER_EPOCH = (657 - len(VAL_IMAGE_IDS)) // IMAGES_PER_GPU
     # VALIDATION_STEPS = max(1, len(VAL_IMAGE_IDS) // IMAGES_PER_GPU)  # Not used!
-    STEPS_PER_EPOCH = 100
+    #STEPS_PER_EPOCH = 100
 
     # Don't exclude based on confidence. Since we have two classes
     # then 0.5 is the minimum anyway as it picks between nucleus and BG
     # DETECTION_MIN_CONFIDENCE = 0
-    DETECTION_MIN_CONFIDENCE = 0  # Randomly try
+    #DETECTION_MIN_CONFIDENCE = 0  # Randomly try
 
 
     # Backbone network architecture
     # Supported values are: resnet50, resnet101
-    BACKBONE = "resnet50"
+    #BACKBONE = "resnet101"
 
     # Input image resizing
     # Random crops of size 512x512
-    IMAGE_RESIZE_MODE = "crop"
-    IMAGE_MIN_DIM = 512
-    IMAGE_MAX_DIM = 512
+    IMAGE_RESIZE_MODE = "square"
+    IMAGE_MIN_DIM = 1024
+    IMAGE_MAX_DIM = 1024
     IMAGE_MIN_SCALE = 2.0
 
     # Length of square anchor side in pixels
-    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
+    #RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
 
     # ROIs kept after non-maximum supression (training and inference)
-    POST_NMS_ROIS_TRAINING = 1000
-    POST_NMS_ROIS_INFERENCE = 2000
+    #POST_NMS_ROIS_TRAINING = 1000
+    #POST_NMS_ROIS_INFERENCE = 2000
 
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
-    RPN_NMS_THRESHOLD = 0.9
+    #RPN_NMS_THRESHOLD = 0.9
 
     # How many anchors per image to use for RPN training
-    RPN_TRAIN_ANCHORS_PER_IMAGE = 64
+    #RPN_TRAIN_ANCHORS_PER_IMAGE = 64
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([43.53, 39.56, 48.22])
+    #MEAN_PIXEL = np.array([43.53, 39.56, 48.22])
 
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
@@ -140,13 +140,13 @@ class KaggleConfig(Config):
     # enough positive proposals to fill this and keep a positive:negative
     # ratio of 1:3. You can increase the number of proposals by adjusting
     # the RPN NMS threshold.
-    TRAIN_ROIS_PER_IMAGE = 128
+    #TRAIN_ROIS_PER_IMAGE = 128
 
     # Maximum number of ground truth instances to use in one image
-    MAX_GT_INSTANCES = 40    ## 200 for nucleus
+    #MAX_GT_INSTANCES = 40    ## 200 for nucleus
 
     # Max number of final detections per image
-    DETECTION_MAX_INSTANCES = 50   ## 400 for nucleus
+    #DETECTION_MAX_INSTANCES = 50   ## 400 for nucleus
 
 
 class KaggleInferenceConfig(KaggleConfig):
