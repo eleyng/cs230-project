@@ -2,6 +2,8 @@
 # https://engineering.matterport.com/splash-of-color-instance-segmentation-with-mask-r-cnn-and-tensorflow-7c761e238b46
 # https://github.com/matterport/Mask_RCNN/blob/master/samples/coco/inspect_data.ipynb
 
+#COMMAND TO RUN:
+#python kaggle_new.py train --dataset ../../ --weights coco --subset train
 
 if __name__ == '__main__':
     import matplotlib
@@ -26,6 +28,8 @@ from mrcnn.config import Config
 from mrcnn import utils
 from mrcnn import model as modellib
 from mrcnn import visualize
+
+from PIL import Image
 
 # Path to trained weights file
 COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
@@ -195,7 +199,7 @@ class KaggleDataset(utils.Dataset):
         # dataset_dir = os.path.join(dataset_dir, subset_dir)
 
         assert subset in ["train", "val", "test"]
-        subset_dir = "train_color/" if subset in ["train","val"] else "test/"
+        subset_dir = "train_color_10/" if subset in ["train","val"] else "test/"
         dataset_dir = os.path.join(dataset_dir, subset_dir)
 
 
@@ -215,43 +219,17 @@ class KaggleDataset(utils.Dataset):
         else:
             # Get image ids from directory names
 
-            image_ids = next(os.walk(dataset_dir))[1]
+            image_ids = next(os.walk(dataset_dir))[2]
             if subset == "train":
                 image_ids = list(set(image_ids) - set(VAL_IMAGE_IDS))
             # image_ids = TRRAIN_IMAGE_IDS
-
+        #print("IMAGE ID in load_kaggle", image_ids)
         # Add images
         for image_id in image_ids:
             self.add_image(
                 "kaggle",
                 image_id=image_id,
-                path=os.path.join(dataset_dir, image_id, "{}.jpg".format(image_id)))    ## Change the directory
-
-    def load_mask(self, image_id):
-        """Generate instance masks for an image.
-       Returns:
-        masks: A bool array of shape [height, width, instance count] with
-            one mask per instance.
-        class_ids: a 1D array of class IDs of the instance masks.
-        """
-        info = self.image_info[image_id]
-        # Get mask directory from image path
-        # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
-        mask_dir = os.path.join(ROOT_DIR, "train_label")
-
-        # mask_dir = os.path.join(dataset_dir, image_id, "{}.jpg".format(image_id))
-
-
-        # Read mask files from .png image
-        mask = []
-        for f in next(os.walk(mask_dir))[2]:
-            if f.endswith(".png"):
-                m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
-                mask.append(m)
-        mask = np.stack(mask, axis=-1)
-        # Return mask, and array of class IDs of each instance. Since we have
-        # one class ID, we return an array of ones
-        return mask, np.ones([mask.shape[-1]], dtype=np.int32)
+                path=os.path.join(dataset_dir, image_id))    ## Change the directory
 
 
 ###################### Coco "load_mask" (mutiple class/instances)######################
@@ -267,29 +245,57 @@ class KaggleDataset(utils.Dataset):
         # If not a COCO image, delegate to parent class.
     def load_mask(self, image_id):
         image_info = self.image_info[image_id]
+        #print("IMAGE INFO", image_info)
         # if image_info["source"] != "coco":
         #     return super(CocoDataset, self).load_mask(image_id)
 
-        instance_masks = []
-        class_ids = []
+        #instance_masks = []
+        #class_ids = []
         # Build mask of shape [height, width, instance_count] and list
         # of class IDs that correspond to each channel of the mask.
-        info = self.image_info[image_id]
+        info = self.image_info[image_id]['id']
+        info = info[:-4] + '_instanceIds.png'
         # Get mask directory from image path
         # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
-        mask_dir = os.path.join(ROOT_DIR, "train_label")
+        mask_dir = os.path.join(ROOT_DIR, "train_label_10")
         # Read mask files from .png image
+        
+        class_ids = []
         mask = []
+        #print('Image Id', image_id)
+        
+        idlist = [0,33,34,35,36,38,39,40]
+        
+        
+        # Read image as array
+        m = skimage.io.imread(os.path.join(mask_dir, info))
+        class_id = m//1000
+        
+        class_car = np.zeros(m.shape)
+        
+        
+        indices_car = np.where(class_id==33)[0]
+        if(len(indices_car)>0):
+            class_car[indices_car] = 1
+            mask.append(class_car)
+            class_ids.append(33)
+        '''
         for f in next(os.walk(mask_dir))[2]:
             if f.endswith(".png"):
+                
+                
                 m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
                 mask.append(m)
                 tlabel = np.asarray(Image.open(os.path.join(mask_dir, f)))
                 class_id = tlabel//1000
                 class_ids.append(class_id)
+                print("CLASSID", class_id)
+        '''
+                
         mask = np.stack(mask, axis=-1)
-
         class_ids = np.array(class_ids, dtype=np.int32)
+        #print("CLASS IDs", class_ids)
+        
         return mask, class_ids
         # Return mask, and array of class IDs of each instance. Since we have
         # one class ID, we return an array of ones
@@ -530,6 +536,7 @@ if __name__ == '__main__':
     print("Logs: ", args.logs)
 
     # Configurations
+    print("Configurating.......")
     if args.command == "train":
         config = KaggleConfig()
     else:
@@ -537,15 +544,19 @@ if __name__ == '__main__':
     config.display()
 
     # Create model
+    print("Creating Model......")
     if args.command == "train":
+        print("Training Mode")
         model = modellib.MaskRCNN(mode="training", config=config,
                                   model_dir=args.logs)
     else:
+        print("Inference Mode")
         model = modellib.MaskRCNN(mode="inference", config=config,
                                   model_dir=args.logs)
 
     # Select weights file to load
     if args.weights.lower() == "coco":
+        print("here")
         weights_path = COCO_WEIGHTS_PATH
         # Download weights file
         if not os.path.exists(weights_path):
@@ -560,16 +571,22 @@ if __name__ == '__main__':
         weights_path = args.weights
 
     # Load weights
+    print("weiightspath", weights_path)
     print("Loading weights ", weights_path)
+    print("NOT PAST")
+    
     if args.weights.lower() == "coco":
         # Exclude the last layers because they require a matching
         # number of classes
+        print("COCO!!!!!!!!!!!!!!")
+        
         model.load_weights(weights_path, by_name=True, exclude=[
             "mrcnn_class_logits", "mrcnn_bbox_fc",
             "mrcnn_bbox", "mrcnn_mask"])
     else:
+        print("NOT COCO!!")
         model.load_weights(weights_path, by_name=True)
-
+    print("NOT LOADED")
     # Train or evaluate
     if args.command == "train":
         train(model, args.dataset, args.subset)
