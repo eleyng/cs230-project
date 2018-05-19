@@ -1,4 +1,5 @@
-# cs230-project: Kaggle Video Segmentation Challenge (https://www.kaggle.com/c/cvpr-2018-autonomous-driving)
+# cs230-project: Kaggle Video Segmentation Challenge 
+https://www.kaggle.com/c/cvpr-2018-autonomous-driving
 
 # Model 1: Transfer Learning
 
