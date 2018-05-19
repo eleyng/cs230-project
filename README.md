@@ -1,7 +1,10 @@
 # cs230-project: Kaggle Video Segmentation Challenge 
 Website: https://www.kaggle.com/c/cvpr-2018-autonomous-driving
+
 Aim: Image segmentation and object detection
+
 Data: Driving images with multiple labels
+
 Evaluation: IoU
 
 ## Model 1: Transfer Learning
