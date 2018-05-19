@@ -1,7 +1,7 @@
 # cs230-project: Kaggle Video Segmentation Challenge 
 https://www.kaggle.com/c/cvpr-2018-autonomous-driving
 
-# Model 1: Transfer Learning
+## Model 1: Transfer Learning
 
 We do transfer learning using Mask-RCNN model pretrained weights. 
 
