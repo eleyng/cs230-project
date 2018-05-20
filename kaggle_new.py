@@ -18,6 +18,7 @@ import datetime
 import numpy as np
 import skimage.io
 from imgaug import augmenters as iaa
+from sklearn.cross_validation import train_test_split  ## Newly imported (by Hubert)
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../../")   ##### Modify it!
@@ -45,11 +46,10 @@ RESULTS_DIR = os.path.join(ROOT_DIR, "results/kaggle/")
 # The dataset doesn't have a standard train/val split, so I picked
 # a variety of images to surve as a validation set.
 
-###### --> Validation set
-VAL_IMAGE_IDS = [
-    "170908_061502408_Camera_5","170908_061502408_Camera_6","170908_061502547_Camera_5",
-    "170908_061502547_Camera_6","170908_061502686_Camera_5"
-]
+###### --> Validation set (Substitue hand-coding!)
+# VAL_IMAGE_IDS = [
+#     "171206_030441892_Camera_6.jpg"
+# ]
 
 # Function to map images to class ids
 def mapImageToClasses(image_file):
@@ -197,10 +197,13 @@ class KaggleDataset(utils.Dataset):
         # subset_dir = "stage1_train" if subset in ["train", "val"] else subset
         # dataset_dir = os.path.join(dataset_dir, subset_dir)
 
-        assert subset in ["train", "val", "test"]
+        assert subset in ["train", "val", "test"]    ## No test is split (if add test set, should be careful in radom shffuling)
         subset_dir = "train_color_10/" if subset in ["train","val"] else "test/"
         dataset_dir = os.path.join(dataset_dir, subset_dir)
 
+        TRAIN_IMAGE_IDS, VAL_IMAGE_IDS = train_test_split(os.listdir(dataset_dir), test_size=0.25, random_state=0)
+        # print("-----TRAIN_IMAGE_IDS-------", TRAIN_IMAGE_IDS)
+        # print("-----VAL_IMAGE_IDS-------", VAL_IMAGE_IDS)
 
         # """Train the model."""
         # # Training dataset.
@@ -218,17 +221,21 @@ class KaggleDataset(utils.Dataset):
         else:
             # Get image ids from directory names
 
-            image_ids = next(os.walk(dataset_dir))[2]
-            if subset == "train":
-                image_ids = list(set(image_ids) - set(VAL_IMAGE_IDS))
-            # image_ids = TRRAIN_IMAGE_IDS
+            # image_ids = next(os.walk(dataset_dir))[2]
+            # if subset == "train":
+            #     image_ids = list(set(image_ids) - set(VAL_IMAGE_IDS))
+            #     print ()
+            image_ids = TRAIN_IMAGE_IDS
         #print("IMAGE ID in load_kaggle", image_ids)
         # Add images
         for image_id in image_ids:
-            self.add_image(
-                "kaggle",
-                image_id=image_id,
-                path=os.path.join(dataset_dir, image_id))    ## Change the directory
+            if image_id != ".DS_Store":
+                self.add_image(
+                    "kaggle",
+                    image_id=image_id,
+                    path=os.path.join(dataset_dir, image_id))    ## Change the directory
+                # print("========Loading Image (path)========", os.path.join(dataset_dir, "{}".format(image_id)))
+                # print("========Loading Image (image_id)========", image_id)
 
 
 ###################### Coco "load_mask" (mutiple class/instances)######################
@@ -270,6 +277,7 @@ class KaggleDataset(utils.Dataset):
         info = info[:-4] + '_instanceIds.png'
         
         mask_dir = os.path.join(ROOT_DIR, "train_label_10")
+        print("======== m ========", os.path.join(mask_dir, info))
         # Read mask files from .png image
         
         class_ids = []
