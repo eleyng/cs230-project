@@ -93,7 +93,7 @@ class KaggleConfig(Config):
     #IMAGES_PER_GPU = 6
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 8  # Background + nucleus
+    NUM_CLASSES = 8  # Background + nucleus
 
 
     # Number of training and validation steps per epoch
@@ -186,15 +186,25 @@ class KaggleDataset(utils.Dataset):
         """
         # Add classes. We have 8 classes plus one background class
         # The data we pre-processed should transform any other objet to "0"
-        self.add_class("kaggle", 33, "car")
-        self.add_class("kaggle", 34, "motorbicycle")
-        self.add_class("kaggle", 35, "bicycle")
-        self.add_class("kaggle", 36, "person")
-        self.add_class("kaggle", 38, "truck")
-        self.add_class("kaggle", 39, "bus")
-        self.add_class("kaggle", 40, "tricycle")
-        self.add_class("kaggle", 0, "others")
+#        self.add_class("kaggle", 33, "car")
+#        self.add_class("kaggle", 34, "motorbicycle")
+#        self.add_class("kaggle", 35, "bicycle")
+#        self.add_class("kaggle", 36, "person")
+#        self.add_class("kaggle", 38, "truck")
+#        self.add_class("kaggle", 39, "bus")
+#        self.add_class("kaggle", 40, "tricycle")
+#        self.add_class("kaggle", 0, "others")
 
+        self.add_class("kaggle", 1, "car")
+        self.add_class("kaggle", 2, "motorbicycle")
+        self.add_class("kaggle", 3, "bicycle")
+        self.add_class("kaggle", 4, "person")
+        self.add_class("kaggle", 5, "truck")
+        self.add_class("kaggle", 6, "bus")
+        self.add_class("kaggle", 7, "tricycle")
+        self.add_class("kaggle", 0, "others")
+        
+        
         # Which subset?
         # "val": use hard-coded list above
         # "train": use data from stage1_train minus the hard-coded list above
@@ -283,7 +293,7 @@ class KaggleDataset(utils.Dataset):
         mask = []
         #print('Image Id', image_id)
         
-        idlist = [0,33,34,35,36,38,39,40]
+        #idlist = [0,33,34,35,36,38,39,40]
         
         
         # Read image as array
@@ -296,7 +306,7 @@ class KaggleDataset(utils.Dataset):
         
         class_bg_sub = np.zeros(m.shape)
         
-        for id in idlist:
+        for id in range(0, 8):
             if id == 0:
                 continue
             else:
