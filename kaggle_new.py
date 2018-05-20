@@ -73,9 +73,10 @@ VAL_IMAGE_IDS = [
     # "cab4875269f44a701c5e58190a1d2f6fcb577ea79d842522dcab20ccb39b7ad2",
     # "8ecdb93582b2d5270457b36651b62776256ade3aaa2d7432ae65c14f07432d49",
     "170908_061502408_Camera_5","170908_061502408_Camera_6","170908_061502547_Camera_5",
-    "170908_061502547_Camera_6","170908_061502686_Camera_5","170908_061502686_Camera_6",
-    "170908_061502825_Camera_5","170908_061502825_Camera_6","170908_061502964_Camera_5",
-    "170908_061502964_Camera_6"
+    "170908_061502547_Camera_6","170908_061502686_Camera_5"
+    #,"170908_061502686_Camera_6",
+    #"170908_061502825_Camera_5","170908_061502825_Camera_6","170908_061502964_Camera_5",
+    #"170908_061502964_Camera_6"
 ]
 
 
@@ -151,6 +152,11 @@ class KaggleConfig(Config):
 
     # Max number of final detections per image
     #DETECTION_MAX_INSTANCES = 50   ## 400 for nucleus
+    
+    # Steps per Epoch
+    STEPS_PER_EPOCH = 1000
+    
+ 
 
 
 class KaggleInferenceConfig(KaggleConfig):
@@ -243,20 +249,33 @@ class KaggleDataset(utils.Dataset):
         class_ids: a 1D array of class IDs of the instance masks.
         """
         # If not a COCO image, delegate to parent class.
+            
     def load_mask(self, image_id):
-        image_info = self.image_info[image_id]
+        
+        #image_info = self.image_info[image_id]
         #print("IMAGE INFO", image_info)
         # if image_info["source"] != "coco":
         #     return super(CocoDataset, self).load_mask(image_id)
 
-        #instance_masks = []
-        #class_ids = []
+        # Build mask of shape [height, width, instance_count] and list
+        # of class IDs that correspond to each channel of the mask.
+        #info = self.image_info[image_id]['id']
+        #info = info[:-4] + '_instanceIds.png'
+        # Get mask directory from image path
+        # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+        #mask_dir = os.path.join(ROOT_DIR, "train_label_10")
+        # Read mask files from .png image
+        
+        image_info = self.image_info[image_id]
+        
+        # if image_info["source"] != "coco":
+        #     return super(CocoDataset, self).load_mask(image_id)
+
         # Build mask of shape [height, width, instance_count] and list
         # of class IDs that correspond to each channel of the mask.
         info = self.image_info[image_id]['id']
         info = info[:-4] + '_instanceIds.png'
-        # Get mask directory from image path
-        # mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "masks")
+        
         mask_dir = os.path.join(ROOT_DIR, "train_label_10")
         # Read mask files from .png image
         
@@ -268,70 +287,48 @@ class KaggleDataset(utils.Dataset):
         
         
         # Read image as array
+        print("-"*50)
+        
         m = skimage.io.imread(os.path.join(mask_dir, info))
+        
+        
         class_id = m//1000
         
-        class_car = np.zeros(m.shape)
+        class_bg_sub = np.zeros(m.shape)
         
+        for id in idlist:
+            if id == 0:
+                continue
+            else:
+                print("ID!!!!!!", id)
+                indices_obj = np.where(class_id==id)
+                #print("indices_obj = ", indices_obj)
+                if(len(indices_obj[0])>0):
+                    class_obj = np.zeros(m.shape)
+                    print("You are here with  id = ", id)
+                    class_obj[indices_obj] = 1
+                    mask.append(class_obj)
+                    class_ids.append(id)
+                    class_bg_sub = id*class_obj
+                    #print("class_obj = ", class_obj)
+                    
+                    #viewer = ImageViewer(class_obj)
+                    #viewer.show()
+                    
+            #visualize.display_images([class_obj])
         
-        indices_car = np.where(class_id==33)[0]
-        if(len(indices_car)>0):
-            class_car[indices_car] = 1
-            mask.append(class_car)
-            class_ids.append(33)
-        '''
-        for f in next(os.walk(mask_dir))[2]:
-            if f.endswith(".png"):
-                
-                
-                m = skimage.io.imread(os.path.join(mask_dir, f)).astype(np.bool)
-                mask.append(m)
-                tlabel = np.asarray(Image.open(os.path.join(mask_dir, f)))
-                class_id = tlabel//1000
-                class_ids.append(class_id)
-                print("CLASSID", class_id)
-        '''
-                
+        class_bg = np.asarray(class_id - class_bg_sub).astype(np.bool)
+        if np.count_nonzero(class_bg) > 0:
+            mask.append(class_bg)
+            class_ids.append(0)
+                       
         mask = np.stack(mask, axis=-1)
         class_ids = np.array(class_ids, dtype=np.int32)
-        #print("CLASS IDs", class_ids)
+        print("CLASS IDs", class_ids)
         
         return mask, class_ids
-        # Return mask, and array of class IDs of each instance. Since we have
-        # one class ID, we return an array of ones
-        # return mask, np.ones([mask.shape[-1]], dtype=np.int32)
-        ##
 
-        # for annotation in annotations:
-        #     class_id = self.map_source_class_id(
-        #         "coco.{}".format(annotation['category_id']))
-        #     if class_id:
-        #         m = self.annToMask(annotation, image_info["height"],
-        #                            image_info["width"])
-        #         # Some objects are so small that they're less than 1 pixel area
-        #         # and end up rounded out. Skip those objects.
-        #         if m.max() < 1:
-        #             continue
-        #         # Is it a crowd? If so, use a negative class ID.
-        #         if annotation['iscrowd']:
-        #             # Use negative class ID for crowds
-        #             class_id *= -1
-        #             # For crowd masks, annToMask() sometimes returns a mask
-        #             # smaller than the given dimensions. If so, resize it.
-        #             if m.shape[0] != image_info["height"] or m.shape[1] != image_info["width"]:
-        #                 m = np.ones([image_info["height"], image_info["width"]], dtype=bool)
-        #         instance_masks.append(m)
 
-        
-
-        # Pack instance masks into an array
-        # if class_ids:
-        #     mask = np.stack(instance_masks, axis=2).astype(np.bool)
-            # class_ids = np.array(class_ids, dtype=np.int32)
-            # return mask, class_ids
-        #else:
-            # Call super class to return an empty mask
-            #return super(CocoDataset, self).load_mask(image_id)
 ##################### Coco "load_mask" (mutiple class/instances)######################
 
     def image_reference(self, image_id):
@@ -379,14 +376,16 @@ def train(model, dataset_dir, subset):
     print("Train network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=20,
+                epochs=1,
                 layers='heads')
 
+    '''
     print("Train all layers")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
                 epochs=40,
                 layers='all')
+    '''
 
 
 ############################################################
@@ -585,7 +584,9 @@ if __name__ == '__main__':
             "mrcnn_bbox", "mrcnn_mask"])
     else:
         print("NOT COCO!!")
-        model.load_weights(weights_path, by_name=True)
+        model.load_weights(weights_path, by_name=True, exclude=[
+            "mrcnn_class_logits", "mrcnn_bbox_fc",
+            "mrcnn_bbox", "mrcnn_mask"])
     print("NOT LOADED")
     # Train or evaluate
     if args.command == "train":
