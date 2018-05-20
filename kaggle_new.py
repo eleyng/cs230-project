@@ -85,6 +85,16 @@ VAL_IMAGE_IDS = [
 ############################################################
 
 class KaggleConfig(Config):
+    
+    
+    def __init__ (self, num_classes = 8):
+        self.NUM_CLASSES = num_classes
+        super().__init__
+        
+        
+    # Number of classes (including background)
+    #NUM_CLASSES = 8  # Background + nucleus     
+        
     """Configuration for training on the nucleus segmentation dataset."""
     # Give the configuration a recognizable name
     NAME = "kaggle"
@@ -92,8 +102,7 @@ class KaggleConfig(Config):
     # Adjust depending on your GPU memory
     #IMAGES_PER_GPU = 6
 
-    # Number of classes (including background)
-    NUM_CLASSES = 8  # Background + nucleus
+    
 
 
     # Number of training and validation steps per epoch
@@ -155,6 +164,8 @@ class KaggleConfig(Config):
     
     # Steps per Epoch
     STEPS_PER_EPOCH = 1000
+    
+
     
  
 
@@ -293,11 +304,12 @@ class KaggleDataset(utils.Dataset):
         mask = []
         #print('Image Id', image_id)
         
-        #idlist = [0,33,34,35,36,38,39,40]
+        idlist = [0,33,34,35,36,38,39,40]
+        class_dict = {0:0, 33:1, 34:2, 35:3, 36:4, 38:5, 39:6, 40:7}
         
         
         # Read image as array
-        print("-"*50)
+        #print("-"*50)
         
         m = skimage.io.imread(os.path.join(mask_dir, info))
         
@@ -306,19 +318,20 @@ class KaggleDataset(utils.Dataset):
         
         class_bg_sub = np.zeros(m.shape)
         
-        for id in range(0, 8):
+        for id in idlist:
             if id == 0:
                 continue
             else:
-                print("ID!!!!!!", id)
+                #print("ID!!!!!!", id)
                 indices_obj = np.where(class_id==id)
                 #print("indices_obj = ", indices_obj)
                 if(len(indices_obj[0])>0):
                     class_obj = np.zeros(m.shape)
-                    print("You are here with  id = ", id)
+                    #print("You are here with  id = ", id)
                     class_obj[indices_obj] = 1
                     mask.append(class_obj)
-                    class_ids.append(id)
+                    
+                    class_ids.append(class_dict[id])
                     class_bg_sub = id*class_obj
                     #print("class_obj = ", class_obj)
                     
@@ -330,7 +343,7 @@ class KaggleDataset(utils.Dataset):
         class_bg = np.asarray(class_id - class_bg_sub).astype(np.bool)
         if np.count_nonzero(class_bg) > 0:
             mask.append(class_bg)
-            class_ids.append(0)
+            class_ids.append(class_dict[0])
                        
         mask = np.stack(mask, axis=-1)
         class_ids = np.array(class_ids, dtype=np.int32)
@@ -547,9 +560,9 @@ if __name__ == '__main__':
     # Configurations
     print("Configurating.......")
     if args.command == "train":
-        config = KaggleConfig()
+        config = KaggleConfig(num_classes = 8)
     else:
-        config = KaggleInferenceConfig()
+        config = KaggleInferenceConfig(num_classes = 8)
     config.display()
 
     # Create model
