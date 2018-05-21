@@ -1,4 +1,4 @@
-# https://github.com/matterport/Mask_RCNN/blob/master/samples/nucleus/nucleus.py
+#https://github.com/matterport/Mask_RCNN/blob/master/samples/nucleus/nucleus.py
 # https://engineering.matterport.com/splash-of-color-instance-segmentation-with-mask-r-cnn-and-tensorflow-7c761e238b46
 # https://github.com/matterport/Mask_RCNN/blob/master/samples/coco/inspect_data.ipynb
 
@@ -71,7 +71,7 @@ class KaggleConfig(Config):
     NAME = "kaggle"
 
     # Adjust depending on your GPU memory
-    #IMAGES_PER_GPU = 6
+    IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
     NUM_CLASSES = 8  # Background + nucleus
@@ -137,7 +137,9 @@ class KaggleConfig(Config):
     #DETECTION_MAX_INSTANCES = 50   ## 400 for nucleus
     
     # Steps per Epoch
-    STEPS_PER_EPOCH = 1000
+    # STEPS_PER_EPOCH = 1000
+    STEPS_PER_EPOCH = 5
+
     
  
 
@@ -277,7 +279,7 @@ class KaggleDataset(utils.Dataset):
         info = info[:-4] + '_instanceIds.png'
         
         mask_dir = os.path.join(ROOT_DIR, "train_label_10")
-        print("======== m ========", os.path.join(mask_dir, info))
+        # print("======== m ========", os.path.join(mask_dir, info))
         # Read mask files from .png image
         
         class_ids = []
@@ -323,10 +325,11 @@ class KaggleDataset(utils.Dataset):
         #print("class ids shape = ", len(class_ids))
         
         #mask = np.stack(mask, axis=-1)
-        mask = np.stack(mask, axis=2).astype(np.bool)
-        class_ids = np.array(class_ids, dtype=np.int32)
-        print("CLASS IDs", class_ids)
-        print("mask shape=",mask.shape)
+        if (len(mask)>0):
+            mask = np.stack(mask, axis=2).astype(np.bool)
+            class_ids = np.array(class_ids, dtype=np.int32)
+        # print("CLASS IDs", class_ids)
+        # print("mask shape=",mask.shape)
         
         return mask, class_ids
 
@@ -378,7 +381,7 @@ def train(model, dataset_dir, subset):
     print("Train network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=1,
+                epochs=5,
                 layers='heads')
 
     '''
@@ -484,9 +487,9 @@ def detect(model, dataset_dir, subset):
         visualize.display_instances(
             image, r['rois'], r['masks'], r['class_ids'],
             dataset.class_names, r['scores'],
-            show_bbox=False, show_mask=False,
+            show_bbox=True, show_mask=True,
             title="Predictions")
-        plt.savefig("{}/{}.png".format(submit_dir, dataset.image_info[image_id]["id"]))
+        plt.savefig("{}/{}".format(submit_dir, dataset.image_info[image_id]["id"]))
 
     # Save to csv file
     submission = "ImageId,EncodedPixels\n" + "\n".join(submission)
