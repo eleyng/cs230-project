@@ -37,7 +37,7 @@ class LossHistory(keras.callbacks.Callback):
     def on_train_begin(self, logs={}):
         self.losses = []
     def on_batch_end(self, batch, logs={}):
-        print("loss = ",logs.get('loss'))
+        #print("loss = ",logs.get('loss'))
         self.losses.append(logs.get('loss'))
 
 ############################################################
