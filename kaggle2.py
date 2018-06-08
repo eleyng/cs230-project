@@ -215,7 +215,7 @@ class KaggleDataset(utils.Dataset):
 
 	# the folder of train_color contains 15k images 
         assert subset in ["train", "val", "test"]    ## No test is split (if add test set, should be careful in radom shffuling)
-        subset_dir = "train_color_10/" if subset in ["train","val"] else "test/"
+        subset_dir = "train_color_10/" if subset in ["train","val"] else "test_color_10/"
         #subset_dir = "train_color/" if subset in ["train","val"] else "test/"
 	
 	# the folder of train_color contains 15k images 
@@ -311,47 +311,29 @@ class KaggleDataset(utils.Dataset):
         
         
         # Read image as array
-        #print("-"*50)
-        
         m = skimage.io.imread(os.path.join(mask_dir, info))
         class_id = m//1000
-        
-        #class_bg_sub = np.zeros(m.shape)
         
         for id in idlist:
             if id == 0:
                 continue
             else:
-#                print("ID!!!!!!", id)
                 indices_obj = np.where(class_id==id)
-#                print("indices_obj = ", indices_obj)
-
                 if(len(indices_obj[0])>0):
-# #                   print("entered")
-                     class_obj = np.zeros(m.shape)
-#                    #print("You are here with  id = ", id)
-                     class_obj[indices_obj] = 1
-                     mask.append(class_obj)
-                     class_ids.append(class_dict[id])
-                     #class_bg_sub = id*class_obj
-
-                #class_obj = np.zeros(m.shape)
-                #print("You are here with  id = ", id)
-                #class_obj[indices_obj] = 1
-                #mask.append(class_obj)
-                #class_ids.append(class_dict[id])
-                    #class_bg_sub = id*class_obj
+                     points = m[indices_obj]%id
+                     #print(points)
+                     unique_points = np.unique(points)
+                     #print("unique_points=",unique_points)
+                     for point in unique_points:
+                         class_obj = np.zeros(m.shape)
+                         instance_id = id*1000+point
+                         #print("instance_id = ", instance_id)
+                         index = np.where(m==instance_id)
+                         #print("length = ",len(index[0]))
+                         class_obj[index] = 1
+                         mask.append(class_obj)
+                         class_ids.append(class_dict[id])
     
-        #class_bg = np.asarray(class_id - class_bg_sub).astype(np.bool)
-        #if np.count_nonzero(class_bg) > 0:
-        #   mask.append(class_bg)
-        #    class_ids.append(class_dict[0])
-        
-        #print("mask shape = ", len(mask))
-        #print("mask1 shape = ", mask[0].shape)
-        #print("class ids shape = ", len(class_ids))
-        
-        #mask = np.stack(mask, axis=-1)
         if (len(mask)>0):
             mask = np.stack(mask, axis=2).astype(np.bool)
             class_ids = np.array(class_ids, dtype=np.int32)
@@ -414,7 +396,7 @@ def train(model, dataset_dir, subset):
     model.train(dataset_train, dataset_val,
                 #learning_rate=0.01,
                 learning_rate=config.LEARNING_RATE,   #0.001 default
-                epochs=20,
+                epochs=40,
                 layers='heads')
 
     '''
@@ -495,6 +477,7 @@ def detect(model, dataset_dir, subset):
     print("Running on {}".format(dataset_dir))
 
     # Create directory
+    print("Creating directory")
     if not os.path.exists(RESULTS_DIR):
         os.makedirs(RESULTS_DIR)
     submit_dir = "submit_{:%Y%m%dT%H%M%S}".format(datetime.datetime.now())   ## Modify this!!!
@@ -502,12 +485,15 @@ def detect(model, dataset_dir, subset):
     os.makedirs(submit_dir)
 
     # Read dataset
+    print("Reading dataset")
     dataset = KaggleDataset()
     dataset.load_kaggle(dataset_dir, subset)
     dataset.prepare()
     # Load over images
+    print("Loading images")
     submission = []
     for image_id in dataset.image_ids:
+        print("image_id = ",image_id)
         # Load image and run detection
         image = dataset.load_image(image_id)
         # Detect objects
