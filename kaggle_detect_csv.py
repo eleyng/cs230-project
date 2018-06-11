@@ -1,3 +1,5 @@
+# Version: Writes CSV file for Kaggle Submission in addition to running detection
+
 import os
 import sys
 import random
