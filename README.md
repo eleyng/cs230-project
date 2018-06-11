@@ -7,6 +7,8 @@ Data: Driving images with multiple labels
 
 Evaluation: IoU
 
+Usage: Run kaggle2.py for latest working training script. Use kaggle_detect_csv.py to run prediction and generate CSV for Kaggle submission.
+
 ## Model 1: Transfer Learning
 
 We do transfer learning using Mask-RCNN model pretrained weights. 
