@@ -1,3 +1,5 @@
+# Version: Latest Working training script
+
 #://github.com/matterport/Mask_RCNN/blob/master/samples/nucleus/nucleus.py
 # https://engineering.matterport.com/splash-of-color-instance-segmentation-with-mask-r-cnn-and-tensorflow-7c761e238b46
 # https://github.com/matterport/Mask_RCNN/blob/master/samples/coco/inspect_data.ipynb
