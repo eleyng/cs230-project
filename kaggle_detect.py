@@ -1,3 +1,5 @@
+# Version: Runs detect function (generates predictions)
+
 import os
 import sys
 import random
